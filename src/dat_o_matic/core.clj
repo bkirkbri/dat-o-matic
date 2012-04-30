@@ -2,7 +2,7 @@
   (:use [datomic.api :only [q db] :as d])
   (:import [java.util UUID]))
 
-(defn temp-db
+(defn temp-conn
   "Returns a new in-memory database connection."
   [& args]
   (let [name (or (first args) (str (UUID/randomUUID)))
