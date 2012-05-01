@@ -1,5 +1,7 @@
 (ns dat-o-matic.core
   (:use [datomic.api :only [q db] :as d])
+  (:require [clojure.pprint :as pp])
+  (:require [clojure.string :as str])
   (:import [java.util UUID]))
 
 (defn temp-conn
@@ -74,11 +76,69 @@
   [db-or-conn]
   (if (isa? (class db-or-conn) datomic.db.Db) db-or-conn (db db-or-conn)))
 
+(defn list-attributes
+  "Returns a list of attributes in the specified namespaces,
+   or all namespaces when none are specified.
+
+   Thanks to Stu Halloway: https://gist.github.com/2560986"
+  [db-or-conn & [re]]
+  (let [db (ensure-db db-or-conn)
+        re (or re #".")]
+    (map first
+         (let [rules '[[[attr-match ?re ?attr]
+                        [:db.part/db :db.install/attribute ?e]
+                        [?e :db/ident ?attr]
+                        [(str ?attr) ?str]
+                        [(re-find ?re ?str)]]]]
+           (q '[:find ?attr
+                :in $ % ?re
+                :where (attr-match ?re ?attr)]
+              db rules re)))))
+
 (defn describe-attribute
   "Returns a map of facts about an attribute."
   [db-or-conn attr-id]
-  (let [e (q `[:find ?e
-               :where [[?e :db/ident ~attr-id]
-                       [?e :db.install/_attribute :db.part/db]]] (ensure-db db-or-conn))]
-    e))
+  (into {} (d/entity (ensure-db db-or-conn) attr-id)))
 
+(defn describe-attributes
+  "Returns a map of attributes, keyed by :db/ident with maps of facts as values.
+   When called without a seq of attr-ids, includes all attributes."
+  ([db-or-conn attr-ids]
+     (let [db (ensure-db db-or-conn)
+           describer (partial describe-attribute db)
+           attr-maps (map describer attr-ids)]
+       (zipmap (map :db/ident attr-maps) (map #(dissoc % :db/ident) attr-maps))))
+  ([db-or-conn]
+     (describe-attributes db-or-conn (list-attributes db-or-conn))))
+
+(defn simplify-attribute-description
+  "Removes Datomic namespacing from attribute key-value pairs to simplify reading."
+  [attr-desc]
+  (let [remap {:db/cardinality :cardinality
+               :db/unique :unique
+               :db/index :index
+               :db/doc :doc
+               :db/valueType :type
+               :db/fulltext :fulltext
+               :db/noHistory :no-history
+               :db/isComponent :component
+
+               :db.cardinality/one :one
+               :db.cardinality/many :many
+               :db.unique/unique :unique
+               :db.unique/identity :identity
+               :db.type/long :long
+               :db.type/string :string
+               :db.type/keyword :keyword
+               :db.type/ref :ref
+               :db.type/boolean :boolean
+               :db.type/instant :instant}]
+    (into {}
+          (map (fn [[k v]]
+                 [(get remap k k) (get remap v v)])
+               attr-desc))))
+
+(defn pprint-attribute
+  "Outputs a pretty-printed description of an attribute (given a description)."
+  [attr-desc]
+  (pp/pprint (simplify-attribute-description attr-desc)))
