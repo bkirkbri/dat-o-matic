@@ -12,14 +12,16 @@
     (d/create-database uri)
     (d/connect uri)))
 
-(defn transact
+(defn transact!
   "Execute a transaction synchronously and return true or throw an Exception."
   [conn txn]
   (try 
     @(d/transact conn txn)
     (catch Exception e (throw e))))
 
-(defn safe-transact
+;; TODO: how to handle Exceptions?
+;; (println) is not the right way, but it lets us see them in a REPL for now...
+(defn safe-transact!
   "Execute a transaction synchronously and return true or false, logging any Exception."
   [conn txn]
   (try
@@ -36,7 +38,7 @@
 (defn create-partition!
   "Creates and installs the requested partition."
   [conn part-id]
-  (safe-transact conn (create-partition-txn part-id)))
+  (safe-transact! conn (create-partition-txn part-id)))
 
 (defn create-attribute-txn
   "Returns transaction data that will create and install the requested attribute."
@@ -69,7 +71,7 @@
 (defn create-attribute!
   "Creates and installs the requested partition, returns false on failure."
   [conn & args]
-  (safe-transact conn (apply create-attribute-txn args)))
+  (safe-transact! conn (apply create-attribute-txn args)))
 
 (defn ensure-db
   "Given a Datomic database or connection, return a database."
