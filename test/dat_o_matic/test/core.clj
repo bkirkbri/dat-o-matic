@@ -16,19 +16,19 @@
     (is (= true (safe-transact conn txn)) "Can issue a safe transaction.")
     (is (= false (safe-transact conn bad-txn)) "Can issue a failing safe transaction.")))
 
-(deftest new-part-test
+(deftest create-part-test
   (let [part-txn {:db/id #db/id[:db.part/db]
                   :db/ident :test-part
                   :db.install/_partition :db.part/db}
         conn (temp-conn)
         txn [{:db/id #db/id[:test-part] :db/ident :test-entity}]]
-    (is (= (dissoc (first (new-partition-txn :test-part)) :db/id)
+    (is (= (dissoc (first (create-partition-txn :test-part)) :db/id)
            (dissoc part-txn :db/id)) "Transaction data for partition is correct.")
     (is (thrown? Exception (transact conn txn)) "Can't add to non-existent partition.")
-    (is (= true (new-partition conn :test-part)))
+    (is (= true (create-partition! conn :test-part)))
     (is (= true (transact conn txn)) "Can add after parition exists.")))
 
-(deftest new-attr-test
+(deftest create-attr-test
   (let [attr-txn {:db/id #db/id[:db.part/db]
                   :db/ident :myattr
                   :db/unique :db.unique/identity
@@ -41,10 +41,10 @@
         conn (temp-conn)
         txn [{:db/id #db/id [:db.part/user] :db/ident :test-entity :myattr "yo ho ho and a bottle of"}]
         attr-args [:myattr :type :string :doc "Something" :unique :identity :index true :fulltext true]]
-    (is (= (dissoc (first (apply new-attribute-txn attr-args)) :db/id)
+    (is (= (dissoc (first (apply create-attribute-txn attr-args)) :db/id)
            (dissoc attr-txn :db/id)) "Transaction data for attribute is correct.")
     (is (thrown? Exception (transact conn txn)) "Can't add a non-existent attribute.")
-    (is (= true (apply new-attribute conn attr-args)))
+    (is (= true (apply create-attribute! conn attr-args)))
     (is (= true (transact conn txn)) "Can add after attribute exists.")))
 
 (deftest ensure-db-test

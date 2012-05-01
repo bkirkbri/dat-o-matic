@@ -26,24 +26,24 @@
     @(d/transact conn txn)
     (catch Exception e (println e) false)))
 
-(defn new-partition-txn
+(defn create-partition-txn
   "Returns transaction data that will create and install the requested partition."
   [part-id]
   [{:db/id #db/id[:db.part/db]
     :db/ident part-id
     :db.install/_partition :db.part/db}])
 
-(defn new-partition
+(defn create-partition!
   "Creates and installs the requested partition."
   [conn part-id]
-  (safe-transact conn (new-partition-txn part-id)))
+  (safe-transact conn (create-partition-txn part-id)))
 
-(defn new-attribute-txn
+(defn create-attribute-txn
   "Returns transaction data that will create and install the requested attribute."
   [attr-id & args]
   (let [opts (apply hash-map args)
         type (:type opts)
-        _ (when-not type (throw (RuntimeException. "No :type for new-attribute-txn")))
+        _ (when-not type (throw (RuntimeException. "No :type for create-attribute-txn")))
         type (keyword (str "db.type/" (name type)))
         cardinality (:cardinality opts :one)
         cardinality (keyword (str "db.cardinality/" (name cardinality)))
@@ -66,10 +66,10 @@
             (when (and component (= :db.type/ref type)) {:db/isComponent true})
             (when no-history {:db/noHistory true}))]))
 
-(defn new-attribute
+(defn create-attribute!
   "Creates and installs the requested partition, returns false on failure."
   [conn & args]
-  (safe-transact conn (apply new-attribute-txn args)))
+  (safe-transact conn (apply create-attribute-txn args)))
 
 (defn ensure-db
   "Given a Datomic database or connection, return a database."
