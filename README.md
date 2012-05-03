@@ -14,6 +14,14 @@ A simple toolkit for working with [Datomic](http://datomic.com)
 (create-attribute! conn :example/stock :type :long :doc "How many of this entity are available")
 (create-attribute! conn :example/popular :type :boolean :doc "An entity's size")
 
+;; or
+
+(create-attributes! conn 
+                    [:example/color :type :string :doc "An entity's color"]
+                    [:example/size :type :string :doc "An entity's size"]
+                    [:example/stock :type :long :doc "How many of this entity are available"]
+                    [:example/popular :type :boolean :doc "An entity's size"])
+
 (list-attributes conn #"example")
 (describe-attribute conn :example/color)
 
@@ -24,6 +32,12 @@ A simple toolkit for working with [Datomic](http://datomic.com)
                         :example/size "XS"
                         :example/stock 42
                         :example/popular true}])
+
+(create-entity! conn :my-data 
+                {:example/color "black" 
+                 :example/size "XS"
+                 :example/stock 42
+                 :example/popular true})
 ```
 
 ## License

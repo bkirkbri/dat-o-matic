@@ -38,13 +38,12 @@
 (defn create-partition!
   "Creates and installs the requested partition."
   [conn part-id]
-  (safe-transact! conn (create-partition-txn part-id)))
+  (transact! conn (create-partition-txn part-id)))
 
 (defn create-attribute-txn
   "Returns transaction data that will create and install the requested attribute."
-  [attr-id & args]
-  (let [opts (apply hash-map args)
-        type (:type opts)
+  [attr-id & {:as opts}]
+  (let [type (:type opts)
         _ (when-not type (throw (RuntimeException. "No :type for create-attribute-txn")))
         type (keyword (str "db.type/" (name type)))
         cardinality (:cardinality opts :one)
@@ -69,9 +68,37 @@
             (when no-history {:db/noHistory true}))]))
 
 (defn create-attribute!
-  "Creates and installs the requested partition, returns false on failure."
-  [conn & args]
-  (safe-transact! conn (apply create-attribute-txn args)))
+  "Creates and installs the requested attribute, returns false on failure.
+
+   Valid options are:
+     :type :string, :boolean, :long, :bigint, :float, :double,
+           :bigdec, :ref, :instant, :uuid, :uri
+     :cardinality :one or :many
+     :doc docstring
+     :unique :value or :identity
+     :index true or false
+     :fulltext true or false
+     :isComponent true or false (only for :ref types)
+     :noHistory true or false"
+  [conn name & options]
+  (transact! conn (apply create-attribute-txn name options)))
+
+(defn create-attributes!
+  "Applies create-attribute! on each of it's arguments."
+  [conn & args-seq]
+  (doseq [args args-seq]
+    (apply create-attribute! conn args)))
+
+(defn create-entity-txn
+  "Returns the txn data to create an entity possessing the specified attributes."
+  [conn partition attrs]
+  (vector (assoc attrs :db/id (d/tempid partition))))
+
+; TODO check for a unique attribute, retrieve the entity and return it
+(defn create-entity!
+  "Issue a transaction to create an entity with the specified attributes."
+  [conn partition attrs]
+  (transact! conn (create-entity-txn conn partition attrs)))
 
 (defn ensure-db
   "Given a Datomic database or connection, return a database."

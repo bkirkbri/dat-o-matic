@@ -26,7 +26,7 @@
            (dissoc part-txn :db/id)) "Transaction data for partition is correct.")
     (is (thrown? Exception (transact! conn txn)) "Can't add to non-existent partition.")
     (is (= true (create-partition! conn :test-part)))
-    (is (= true (transact! conn txn)) "Can add after parition exists.")))
+    (is (= true (transact! conn txn)) "Can add after partition exists.")))
 
 (deftest create-attr-test
   (let [attr-txn {:db/id #db/id[:db.part/db]
@@ -46,6 +46,21 @@
     (is (thrown? Exception (transact! conn txn)) "Can't add a non-existent attribute.")
     (is (= true (apply create-attribute! conn attr-args)))
     (is (= true (transact! conn txn)) "Can add after attribute exists.")))
+
+(deftest create-entity-test
+  (let [conn (temp-conn)
+        attrs {:name "Lucifugus" :desc "Eternally frozen..." :uid 42}]
+    (create-partition! conn :mine)
+    (create-attributes! conn
+                        [:name :type :string]
+                        [:desc :type :string]
+                        [:uid :type :long :index true :unique :identity])
+    (create-entity! conn :mine attrs)
+    (let [db (db conn)
+          eid (ffirst (q '[:find ?e :where [?e :uid 42]] db))
+          e (d/entity db eid)]
+      (doseq [k (keys attrs)]
+        (is (= (get attrs k) (get e k)))))))
 
 (deftest ensure-db-test
   (let [conn (temp-conn)]
